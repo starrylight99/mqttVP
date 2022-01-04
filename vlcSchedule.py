@@ -15,7 +15,11 @@ if os.environ.get('DISPLAY','') == '':
 
 _isLinux   = sys.platform.startswith('linux')
 _isWindows = sys.platform.startswith('win')
-
+if _isLinux:
+    print("Linux system")
+elif _isWindows:
+    print("Windows system")
+    
 """ script_dir = os.path.dirname(__file__)
 
 rel_path = "vlcSchedule.pid"
@@ -176,7 +180,7 @@ def initPlaylist(playlist,playlistName,row,columnFrame,width,height):
     root.after(0,waitSwitch,columnFrame,imageFrames)
 
 def waitSwitch(columnFrame,imageFrames):
-    thread = td.Thread(target=waitSwitchThread,args=(columnFrame,imageFrames))
+    thread = td.Thread(target=waitSwitchThread,args=(columnFrame,imageFrames),daemon=True)
     thread.start()
     
 def waitSwitchThread(columnFrame,imageFrames):
@@ -208,7 +212,7 @@ def waitVideoThread(playlist,playlistName,columnFrame,imageFrames,instance,playe
     sys.exit()
 
 def waitVideo(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
-    thread = td.Thread(target=waitVideoThread,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height))
+    thread = td.Thread(target=waitVideoThread,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height),daemon=True)
     thread.start()
 
 def waitImageThread(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
@@ -219,7 +223,7 @@ def waitImageThread(playlist,playlistName,columnFrame,imageFrames,mediaIndex,pre
     sys.exit()
     
 def waitImage(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
-    thread = td.Thread(target=waitImageThread,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay))
+    thread = td.Thread(target=waitImageThread,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay),daemon=True)
     thread.start()
 
 def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height):
