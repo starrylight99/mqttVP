@@ -5,6 +5,7 @@ import sys
 import tkinter as tk
 import threading as td
 import json
+import tracemalloc
 from pympler.tracker import SummaryTracker
 from PIL import ImageTk, Image
 from screeninfo import get_monitors
@@ -15,6 +16,7 @@ if os.environ.get('DISPLAY','') == '':
 
 _isLinux   = sys.platform.startswith('linux')
 _isWindows = sys.platform.startswith('win')
+
 if _isLinux:
     print("Linux system")
 elif _isWindows:
@@ -47,7 +49,7 @@ scheduleName = " ".join(sys.argv[1:]) if len(sys.argv) > 2 else sys.argv[1]
 #scheduleName = 'useThis'
 configFile = open(f'{directory}/{scheduleName}/{scheduleName}_schedule.json')
 scheduleConfig = json.load(configFile)
-
+tracemalloc.start()
 scheduleArray = []
 
 # init 3d array of 0
@@ -127,8 +129,8 @@ def startTiming():
                 columnFrame.grid(row=0, column=index)
 
                 root.after(100,initPlaylist,playlistConfig['playlists'][0],playlistName,0,columnFrame,width,height)
-    else:
-        root.after(100,waitSwitch,None,None)
+                
+    root.after(100,waitSwitch)
         
 def timingChecker():
     global currentTiming
@@ -141,9 +143,14 @@ def timingChecker():
 
 def memoryProfiler():
     while True:
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        print("[ Top 10 ]")
+        for stat in top_stats[:10]:
+            print(stat)
         tracker.print_diff()
         print(time.asctime(time.localtime(time.time())))
-        time.sleep(1800)
+        time.sleep(180)
 
 def initPlaylist(playlist,playlistName,row,columnFrame,width,height):
 
@@ -177,53 +184,57 @@ def initPlaylist(playlist,playlistName,row,columnFrame,width,height):
         paddingFrame.grid(row=1) """
     
     root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,0,None,width,height)
-    root.after(0,waitSwitch,columnFrame,imageFrames)
+    root.after(0,waitDestroy,columnFrame,imageFrames)
 
-def waitSwitch(columnFrame,imageFrames):
-    thread = td.Thread(target=waitSwitchThread,args=(columnFrame,imageFrames),daemon=True)
+def waitSwitch():
+    thread = td.Thread(target=waitSwitchThread)
+    thread.start()
+
+def waitSwitchThread():
+    switch_isSet = switchEvent.wait()
+    time.sleep(3)
+    switchEvent.clear()
+    root.after(0,startTiming)
+    
+def waitDestroy(columnFrame,imageFrames):
+    thread = td.Thread(target=waitDestroyThread,args=(columnFrame,imageFrames))
     thread.start()
     
-def waitSwitchThread(columnFrame,imageFrames):
+def waitDestroyThread(columnFrame,imageFrames):
     switch_isSet = switchEvent.wait()
-    time.sleep(5)
+    time.sleep(1)
     if imageFrames != None:
         for frames in imageFrames:
             if frames != 0:
                 frames.destroy()
         if columnFrame != None:
             columnFrame.destroy()
-    root.after(0,switchEvent.clear)
-    root.after(100,startTiming)
-    time.sleep(200)
-    sys.exit()
 
 def waitVideoThread(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
     time.sleep(0.5)
     while player.is_playing() and not switchEvent.is_set():
         time.sleep(0.1)
     
+    if player.is_playing():
+        player.stop()
     player.get_media().release()
     player.release()
     instance.release()
     previousFrame.destroy()
     if not switchEvent.is_set():
         root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,mediaIndex,None,width,height)
-    time.sleep(100)
-    sys.exit()
 
 def waitVideo(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
-    thread = td.Thread(target=waitVideoThread,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height),daemon=True)
+    thread = td.Thread(target=waitVideoThread,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height))
     thread.start()
 
 def waitImageThread(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
     switch_isSet = switchEvent.wait(int(delay))
     if not switch_isSet:
         root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height)
-    time.sleep(100)
-    sys.exit()
     
 def waitImage(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
-    thread = td.Thread(target=waitImageThread,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay),daemon=True)
+    thread = td.Thread(target=waitImageThread,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay))
     thread.start()
 
 def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height):

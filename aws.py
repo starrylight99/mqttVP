@@ -97,25 +97,24 @@ def downloadSchedule(group, schedule, client):
     statusFile = open('downloads/schedules/' + schedule + '/status.txt', 'w')
     statusFile.write('true')
     statusFile.close()
-    sys.exit()
 
 def startSchedule(scheduleName):
-    while not scheduleEvent.is_set():
-        rel_path = "startSchedule.pid"
-        abs_file_path = os.path.join(script_dir, rel_path)
+    #while not scheduleEvent.is_set():
+    rel_path = "startSchedule.pid"
+    abs_file_path = os.path.join(script_dir, rel_path)
 
-        if _isLinux:
-            p = subprocess.Popen(f'python3 vlcSchedule.py {scheduleName}', shell=True, preexec_fn=os.setsid)
-        elif _isWindows:
-            p = subprocess.Popen(f'python vlcSchedule.py {scheduleName}')
+    if _isLinux:
+        p = subprocess.Popen(f'python3 vlcSchedule.py {scheduleName}', shell=True, preexec_fn=os.setsid)
+    elif _isWindows:
+        p = subprocess.Popen(f'python vlcSchedule.py {scheduleName}')
 
-        output_pid = open(abs_file_path, "w")
-        if _isLinux:
-            output_pid.write(str(os.getpgid(p.pid)))
-        elif _isWindows:
-            output_pid.write(str(p.pid))
-        output_pid.close()
-        p.wait()
+    output_pid = open(abs_file_path, "w")
+    if _isLinux:
+        output_pid.write(str(os.getpgid(p.pid)))
+    elif _isWindows:
+        output_pid.write(str(p.pid))
+    output_pid.close()
+    p.wait()
     scheduleEvent.clear()
     sys.exit()
 
@@ -183,7 +182,7 @@ def on_message(client, userdata, message):
 
 
 broker_address = '18.141.182.21'
-threading.Thread(target=memoryProfiler).start()
+#threading.Thread(target=memoryProfiler).start()
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
