@@ -21,6 +21,9 @@ tracemalloc.start()
 scheduleEvent = threading.Event()
 isPlaying = threading.Event()
 
+if _isWindows:
+    p = None
+    
 with open('config.json', 'r') as f:
     data = json.load(f)
 
@@ -57,14 +60,16 @@ def ping_listdir(client):
     path = 'downloads/schedules/'
     if os.path.exists(path):
         schedules = os.listdir(path)
-        res = 'online ' + data['id']
-        for i in schedules:
-            statusFile = open(path + i + '/status.txt','r')
-            status = statusFile.readline()
-            if status == 'true':
-                client.publish('webApp', f"{res} {i}")
-    else:
-        client.publish('webApp', 'online ' + data['id'] + ' nil')
+        if len(schedules) != 0:
+            res = 'online ' + data['id']
+            for i in schedules:
+                statusFile = open(path + i + '/status.txt','r')
+                status = statusFile.readline()
+                if status == 'true':
+                    client.publish('webApp', f"{res} {i}")
+            return
+    client.publish('webApp', 'online ' + data['id'] + ' nil')
+    sys.exit()
         
 
 def downloadSchedule(group, schedule, client):
@@ -86,12 +91,13 @@ def downloadSchedule(group, schedule, client):
         playlist_path = 'downloads/schedules/' + schedule + '/' + playlist
         os.makedirs(playlist_path, exist_ok=True)
         for key in response["Contents"]:
-            s3.Bucket('maventest1').download_file(key["Key"], playlist_path + '/' + key["Key"].split('/')[-1])
+            s3.Bucket('maventest1').download_file(key["Key"], f"{playlist_path}/{key['Key'].split('/')[-1]}")
     client.publish('webApp', 'Finished Downloading')
 
     statusFile = open('downloads/schedules/' + schedule + '/status.txt', 'w')
     statusFile.write('true')
     statusFile.close()
+    sys.exit()
 
 def startSchedule(scheduleName):
     while not scheduleEvent.is_set():
@@ -101,13 +107,17 @@ def startSchedule(scheduleName):
         if _isLinux:
             p = subprocess.Popen(f'python3 vlcSchedule.py {scheduleName}', shell=True, preexec_fn=os.setsid)
         elif _isWindows:
-            p = subprocess.Popen(f'python vlcSchedule.py {scheduleName}', shell=True, preexec_fn=os.setsid)
+            p = subprocess.Popen(f'python vlcSchedule.py {scheduleName}')
 
         output_pid = open(abs_file_path, "w")
-        output_pid.write(str(os.getpgid(p.pid)))
+        if _isLinux:
+            output_pid.write(str(os.getpgid(p.pid)))
+        elif _isWindows:
+            output_pid.write(str(p.pid))
         output_pid.close()
         p.wait()
     scheduleEvent.clear()
+    sys.exit()
 
         #if p.poll() is not None:
         #    os.kill(p.pid, signal.SIGTERM)
@@ -131,7 +141,7 @@ def on_message(client, userdata, message):
     msg = message.payload.decode()
     split_msg = msg.split(' ')
     print(split_msg)
-    if msg == "ping":
+    if split_msg[0] == "ping":
         pingThread = threading.Thread(target=ping_listdir, args=(client,))
         pingThread.start()
     elif split_msg[1] == data['id']:
@@ -162,7 +172,10 @@ def on_message(client, userdata, message):
                 scheduleEvent.set()
                 pidF = open("startSchedule.pid", "r+")
                 pid = int(pidF.readline())
-                os.killpg(pid, signal.SIGTERM)
+                if _isLinux:
+                    os.killpg(pid, signal.SIGTERM)
+                else:
+                    os.kill(pid, signal.SIGTERM)
                 pidF.truncate(0)
                 pidF.close()
             else:
