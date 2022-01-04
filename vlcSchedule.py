@@ -124,7 +124,7 @@ def startTiming():
 
                 root.after(100,initPlaylist,playlistConfig['playlists'][0],playlistName,0,columnFrame,width,height)
     else:
-        root.after(100,waitSwitchThread,None,None)
+        root.after(100,waitSwitch,None,None)
         
 def timingChecker():
     global currentTiming
@@ -173,13 +173,13 @@ def initPlaylist(playlist,playlistName,row,columnFrame,width,height):
         paddingFrame.grid(row=1) """
     
     root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,0,None,width,height)
-    root.after(0,waitSwitchThread,columnFrame,imageFrames)
+    root.after(0,waitSwitch,columnFrame,imageFrames)
 
-def waitSwitchThread(columnFrame,imageFrames):
-    thread = td.Thread(target=waitSwitch,args=(columnFrame,imageFrames))
+def waitSwitch(columnFrame,imageFrames):
+    thread = td.Thread(target=waitSwitchThread,args=(columnFrame,imageFrames))
     thread.start()
     
-def waitSwitch(columnFrame,imageFrames):
+def waitSwitchThread(columnFrame,imageFrames):
     switch_isSet = switchEvent.wait()
     time.sleep(5)
     if imageFrames != None:
@@ -190,8 +190,10 @@ def waitSwitch(columnFrame,imageFrames):
             columnFrame.destroy()
     root.after(0,switchEvent.clear)
     root.after(100,startTiming)
+    time.sleep(200)
+    sys.exit()
 
-def waitVideo(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
+def waitVideoThread(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
     time.sleep(0.5)
     while player.is_playing() and not switchEvent.is_set():
         time.sleep(0.1)
@@ -202,18 +204,22 @@ def waitVideo(playlist,playlistName,columnFrame,imageFrames,instance,player,medi
     previousFrame.destroy()
     if not switchEvent.is_set():
         root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,mediaIndex,None,width,height)
+    time.sleep(100)
+    sys.exit()
 
-def waitVideoThread(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
-    thread = td.Thread(target=waitVideo,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height))
+def waitVideo(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height):
+    thread = td.Thread(target=waitVideoThread,args=(playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex,previousFrame,width,height))
     thread.start()
 
-def waitImage(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
+def waitImageThread(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
     switch_isSet = switchEvent.wait(int(delay))
     if not switch_isSet:
         root.after(0,playMedia,playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height)
+    time.sleep(100)
+    sys.exit()
     
-def waitImageThread(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
-    thread = td.Thread(target=waitImage,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay))
+def waitImage(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay):
+    thread = td.Thread(target=waitImageThread,args=(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height,delay))
     thread.start()
 
 def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousFrame,width,height):
@@ -230,7 +236,7 @@ def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousF
         print('jpeg')
         imageFrame = imageFrames[mediaIndex]
         imageFrame.grid()
-        root.after(0,waitImageThread,playlist,playlistName,columnFrame,imageFrames,mediaIndex+1,imageFrame,width,height,media[1])
+        root.after(0,waitImage,playlist,playlistName,columnFrame,imageFrames,mediaIndex+1,imageFrame,width,height,media[1])
     elif extension == 'mp4' or extension == 'mov':
         print('mp4')
         mediaFrame = tk.Frame(columnFrame, width=width, height=height)
@@ -254,7 +260,7 @@ def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousF
 
         root.after(0,player.play)
         root.after(300,mediaFrame.grid)
-        root.after(500,waitVideoThread,playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex+1,mediaFrame,width,height)
+        root.after(500,waitVideo,playlist,playlistName,columnFrame,imageFrames,instance,player,mediaIndex+1,mediaFrame,width,height)
 
 td.Thread(target=timingChecker).start()
 #td.Thread(target=memoryProfiler).start()
