@@ -248,20 +248,18 @@ def playMedia(playlist,playlistName,columnFrame,imageFrames,mediaIndex,previousF
         previousFrame.grid_forget()
 
     if extension == 'jpeg' or extension == 'jpg' or extension == 'png':
-        print('jpeg')
         imageFrame = imageFrames[mediaIndex]
         imageFrame.grid()
         root.after(0,waitImage,playlist,playlistName,columnFrame,imageFrames,mediaIndex+1,imageFrame,width,height,media[1])
     elif extension == 'mp4' or extension == 'mov':
-        print('mp4')
         mediaFrame = tk.Frame(columnFrame, width=width, height=height)
         mediaFrame.configure(background='black')
         mediaFrame.grid(row=0)
         mediaFrame.grid_remove()
         if _isLinux:
-            instance = vlc.Instance('--no-xlib --aout=adummy')
+            instance = vlc.Instance('--no-xlib --aout=adummy --quiet')
         else:
-            instance = vlc.Instance('--aout=adummy')
+            instance = vlc.Instance('--aout=adummy --quiet')
 
         player = instance.media_player_new()
         vlcMedia = instance.media_new(f"{directory}/{scheduleConfig['scheduleName']}/{playlistName}/" + media[0])
