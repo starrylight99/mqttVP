@@ -126,6 +126,8 @@ def on_disconnect(client, userdata, rc=0):
 
 def on_connect(client, userdata, flags, rc):
     print("Connected flags" + str(flags) + "result code " + str(rc))
+    client.subscribe('schedule')
+    client.subscribe('ping')
 
 def on_publish(client, userdata, mid):
     print("message published " + str(mid))
@@ -194,6 +196,4 @@ client.username_pw_set(username="maventest",password="12345")
 client.tls_set('ca1.crt')
 client.tls_insecure_set(True)
 client.connect(broker_address, 8883)
-client.subscribe('schedule')
-client.subscribe('ping')
 client.loop_forever()
