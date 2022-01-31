@@ -8,7 +8,6 @@ import threading
 import shutil
 import subprocess
 import sys
-import signal
 import time
 import tracemalloc
 
